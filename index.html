@@ -1,84 +1,217 @@
-const SHEET_NAME = "Sheet1";
-const HEADERS = ["Date", "Name", "Surname", "Research Topic", "Supervisor", "Email"];
-const FRIDAY_DATES = [
-  "01-08-2025", "08-08-2025", "15-08-2025", "22-08-2025", "29-08-2025",
-  "05-09-2025", "12-09-2025", "19-09-2025", "26-09-2025",
-  "03-10-2025", "10-10-2025", "17-10-2025", "24-10-2025"
-];
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Friday Slot Booking Form</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 25px;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      background-color: #fcfcfc;
+      line-height: 1.6;
+      color: #333;
+    }
+    h2 {
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 30px;
+      font-size: 1.8em;
+    }
+    label {
+      display: block;
+      margin-top: 18px;
+      font-weight: bold;
+      color: #555;
+      font-size: 0.95em;
+    }
+    input, select {
+      width: calc(100% - 24px); /* Account for padding and border */
+      padding: 12px;
+      margin-top: 8px;
+      border: 1px solid #c0c0c0;
+      border-radius: 6px;
+      box-sizing: border-box;
+      font-size: 1em;
+      transition: border-color 0.2s ease-in-out;
+    }
+    input:focus, select:focus {
+      border-color: #007bff;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+    }
+    button {
+      background-color: #28a745; /* Green color for submit */
+      color: white;
+      padding: 14px 25px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 30px;
+      width: 100%;
+      font-size: 1.1em;
+      font-weight: bold;
+      transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+    }
+    button:hover {
+      background-color: #218838; /* Darker green on hover */
+      transform: translateY(-1px);
+    }
+    button:active {
+      transform: translateY(0);
+    }
+    #message {
+      margin-top: 25px;
+      padding: 15px;
+      border-radius: 6px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 0.95em;
+      opacity: 0; /* Hidden by default */
+      transition: opacity 0.3s ease-in-out;
+    }
+    #message.show {
+      opacity: 1; /* Show when message is set */
+    }
+    .success {
+      color: #155724;
+      background-color: #d4edda;
+      border: 1px solid #c3e6cb;
+    }
+    .error {
+      color: #721c24;
+      background-color: #f8d7da;
+      border: 1px solid #f5c6cb;
+    }
+  </style>
+</head>
+<body>
 
-function doGet() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
-  const data = sheet.getDataRange().getValues();
+  <h2>🗓️ Friday Research Slot Booking</h2>
 
-  const bookedDates = new Set();
-  const usedEmails = new Set();
+  <form id="bookingForm">
+    <label for="name">Full Name:</label>
+    <input type="text" id="name" name="name" required placeholder="Enter your full name">
 
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
-    const date = row[0];
-    const email = row[5];
-    if (date && date.trim() !== "") bookedDates.add(date.trim());
-    if (email && email.trim() !== "") usedEmails.add(email.trim().toLowerCase());
-  }
+    <label for="surname">Surname:</label>
+    <input type="text" id="surname" name="surname" required placeholder="Enter your surname">
 
-  const availableDates = FRIDAY_DATES
-    .filter(date => !bookedDates.has(date))
-    .map(date => ({ date }));
+    <label for="topic">Research Topic:</label>
+    <input type="text" id="topic" name="topic" required placeholder="e.g., AI in Education">
 
-  return ContentService
-    .createTextOutput(JSON.stringify(availableDates))
-    .setMimeType(ContentService.MimeType.JSON);
-}
+    <label for="supervisor">Supervisor:</label>
+    <input type="text" id="supervisor" name="supervisor" required placeholder="Name of your supervisor">
 
-function doPost(e) {
-  const params = e.parameter;
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
-  const data = sheet.getDataRange().getValues();
+    <label for="email">Email:</label>
+    <input type="email" id="email" name="email" required placeholder="your.email@example.com">
 
-  const date = params.date;
-  const name = params.name;
-  const surname = params.surname;
-  const topic = params.topic;
-  const supervisor = params.supervisor;
-  const email = params.email.toLowerCase();
+    <label for="date">Select Friday Date:</label>
+    <select id="date" name="date" required>
+      <option value="">Loading available dates...</option>
+    </select>
 
-  const bookedDates = new Set();
-  const usedEmails = new Set();
+    <button type="submit">Book Slot</button>
+  </form>
 
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
-    if (row[0] && row[0].trim() !== "") bookedDates.add(row[0].trim());
-    if (row[5] && row[5].trim() !== "") usedEmails.add(row[5].trim().toLowerCase());
-  }
+  <div id="message"></div>
 
-  if (bookedDates.has(date)) {
-    return ContentService.createTextOutput(JSON.stringify({
-      success: false,
-      message: `Date ${date} is already booked.`
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
+  <script>
+    const form = document.getElementById('bookingForm');
+    const messageDiv = document.getElementById('message');
+    const dateSelect = document.getElementById('date');
 
-  if (usedEmails.has(email)) {
-    return ContentService.createTextOutput(JSON.stringify({
-      success: false,
-      message: `Email ${email} has already booked.`
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
+    // YOUR DEPLOYED WEB APP URL IS HERE:
+    const API_URL = "https://script.google.com/macros/s/AKfycbwYGsfh_ZAEv7DXKGDlksxvtCWUYNXEN3U902_tA3NkaphdZxAkiIDMopP4IcmTfdnP/exec"; 
 
-  sheet.appendRow([date, name, surname, topic, supervisor, email]);
+    /**
+     * Displays a message to the user.
+     * @param {string} text The message text.
+     * @param {string} type 'success' or 'error'.
+     */
+    function showMessage(text, type) {
+      messageDiv.textContent = text;
+      messageDiv.className = `show ${type}`; 
+    }
 
-  MailApp.sendEmail({
-    to: email,
-    subject: "Research Friday Booking Confirmation",
-    htmlBody: `
-      <p>Dear ${name} ${surname},</p>
-      <p>Your booking for <strong>${date}</strong> has been confirmed.</p>
-      <p><strong>Topic:</strong> ${topic}<br>
-         <strong>Supervisor:</strong> ${supervisor}</p>
-      <p>Thank you.</p>`
-  });
+    /**
+     * Hides the message.
+     */
+    function hideMessage() {
+      messageDiv.textContent = '';
+      messageDiv.className = ''; 
+    }
 
-  return ContentService.createTextOutput(JSON.stringify({
-    success: true
-  })).setMimeType(ContentService.MimeType.JSON);
-}
+    /**
+     * Fetches and populates available dates into the dropdown.
+     */
+    async function loadAvailableDates() {
+      dateSelect.innerHTML = '<option value="">Loading available dates...</option>';
+      hideMessage(); 
+      try {
+        const response = await fetch(API_URL);
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const data = await response.json();
+
+        dateSelect.innerHTML = '<option value="">Select a Friday...</option>'; 
+        if (data && data.length > 0) {
+          data.forEach(slot => {
+            const opt = document.createElement('option');
+            opt.value = slot.date;
+            opt.textContent = slot.date;
+            dateSelect.appendChild(opt);
+          });
+        } else {
+            dateSelect.innerHTML = '<option value="">No available dates at the moment.</option>';
+        }
+      } catch (error) {
+        console.error('Error fetching dates:', error);
+        dateSelect.innerHTML = '<option value="">Failed to load dates. Please try refreshing the page.</option>';
+        showMessage('Failed to load available dates.', 'error');
+      }
+    }
+
+    // Load dates when the page is fully loaded
+    document.addEventListener('DOMContentLoaded', loadAvailableDates);
+
+    // Handle form submission
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault(); 
+      showMessage('Submitting your booking...', ''); 
+
+      const formData = new FormData(form);
+
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          throw new Error(`Server responded with status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+          showMessage('✅ Booking successful! ' + (result.message || ''), 'success');
+          form.reset(); 
+          await loadAvailableDates(); 
+        } else {
+          showMessage('❌ ' + result.message, 'error');
+        }
+      } catch (error) {
+        console.error('Submission failed:', error);
+        showMessage('❌ An unexpected error occurred. Please try again.', 'error');
+      }
+    });
+  </script>
+
+</body>
+</html>
