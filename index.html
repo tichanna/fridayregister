@@ -112,22 +112,8 @@
 
     <label for="date">Select Friday Date:</label>
     <select id="date" name="date" required>
-      <option value="">Select a Friday...</option>
-      <option value="01-08-2025">01-08-2025</option>
-      <option value="08-08-2025">08-08-2025</option>
-      <option value="15-08-2025">15-08-2025</option>
-      <option value="22-08-2025">22-08-2025</option>
-      <option value="29-08-2025">29-08-2025</option>
-      <option value="05-09-2025">05-09-2025</option>
-      <option value="12-09-2025">12-09-2025</option>
-      <option value="19-09-2025">19-09-2025</option>
-      <option value="26-09-2025">26-09-2025</option>
-      <option value="03-10-2025">03-10-2025</option>
-      <option value="10-10-2025">10-10-2025</option>
-      <option value="17-10-2025">17-10-2025</option>
-      <option value="24-10-2025">24-10-2025</option>
-      <option value="31-10-2025">31-10-2025</option>
-      </select>
+      <option value="">Loading available dates...</option>
+    </select>
 
     <button type="submit">Book Slot</button>
   </form>
@@ -137,7 +123,9 @@
   <script>
     const form = document.getElementById('bookingForm');
     const messageDiv = document.getElementById('message');
+    const dateSelect = document.getElementById('date');
 
+    // YOUR DEPLOYED WEB APP URL IS HERE:
     const API_URL = "https://script.google.com/macros/s/AKfycbwYGsfh_ZAEv7DXKGDlksxvtCWUYNXEN3U902_tA3NkaphdZxAkiIDMopP4IcmTfdnP/exec"; 
 
     /**
@@ -158,8 +146,39 @@
       messageDiv.className = ''; 
     }
 
-    // Since dates are hardcoded, we don't need loadAvailableDates() here anymore
-    // and no DOMContentLoaded listener for it.
+    /**
+     * Fetches and populates available dates into the dropdown.
+     */
+    async function loadAvailableDates() {
+      dateSelect.innerHTML = '<option value="">Loading available dates...</option>';
+      hideMessage(); 
+      try {
+        const response = await fetch(API_URL);
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const data = await response.json();
+
+        dateSelect.innerHTML = '<option value="">Select a Friday...</option>'; 
+        if (data && data.length > 0) {
+          data.forEach(slot => {
+            const opt = document.createElement('option');
+            opt.value = slot.date;
+            opt.textContent = slot.date;
+            dateSelect.appendChild(opt);
+          });
+        } else {
+            dateSelect.innerHTML = '<option value="">No available dates at the moment.</option>';
+        }
+      } catch (error) {
+        console.error('Error fetching dates:', error);
+        dateSelect.innerHTML = '<option value="">Failed to load dates. Please try refreshing the page.</option>';
+        showMessage('Failed to load available dates.', 'error');
+      }
+    }
+
+    // Load dates when the page is fully loaded
+    document.addEventListener('DOMContentLoaded', loadAvailableDates);
 
     // Handle form submission
     form.addEventListener('submit', async (e) => {
@@ -183,8 +202,7 @@
         if (result.success) {
           showMessage('✅ Booking successful! ' + (result.message || ''), 'success');
           form.reset(); 
-          // Note: The dropdown will still show the booked date
-          // as it's static. A page refresh would reset it.
+          await loadAvailableDates(); 
         } else {
           showMessage('❌ ' + result.message, 'error');
         }
