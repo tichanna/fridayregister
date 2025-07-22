@@ -1,127 +1,84 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Friday Research Booking</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 600px;
-      margin: 40px auto;
-      padding: 20px;
-      border: 1px solid #ccc;
-      border-radius: 10px;
-    }
-    label {
-      display: block;
-      margin-top: 15px;
-    }
-    input, select, button {
-      width: 100%;
-      padding: 10px;
-      margin-top: 5px;
-      box-sizing: border-box;
-    }
-    #message {
-      margin-top: 20px;
-      font-weight: bold;
-    }
-  </style>
-</head>
-<body>
+const SHEET_NAME = "Sheet1";
+const HEADERS = ["Date", "Name", "Surname", "Research Topic", "Supervisor", "Email"];
+const FRIDAY_DATES = [
+  "01-08-2025", "08-08-2025", "15-08-2025", "22-08-2025", "29-08-2025",
+  "05-09-2025", "12-09-2025", "19-09-2025", "26-09-2025",
+  "03-10-2025", "10-10-2025", "17-10-2025", "24-10-2025"
+];
 
-  <h2>Friday Research Booking</h2>
+function doGet() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  const data = sheet.getDataRange().getValues();
 
-  <form id="bookingForm">
-    <label for="name">Full Name</label>
-    <input type="text" name="name" required>
+  const bookedDates = new Set();
+  const usedEmails = new Set();
 
-    <label for="surname">Surname</label>
-    <input type="text" name="surname" required>
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const date = row[0];
+    const email = row[5];
+    if (date && date.trim() !== "") bookedDates.add(date.trim());
+    if (email && email.trim() !== "") usedEmails.add(email.trim().toLowerCase());
+  }
 
-    <label for="topic">Research Topic</label>
-    <input type="text" name="topic" required>
+  const availableDates = FRIDAY_DATES
+    .filter(date => !bookedDates.has(date))
+    .map(date => ({ date }));
 
-    <label for="supervisor">Supervisor</label>
-    <input type="text" name="supervisor" required>
+  return ContentService
+    .createTextOutput(JSON.stringify(availableDates))
+    .setMimeType(ContentService.MimeType.JSON);
+}
 
-    <label for="email">Email</label>
-    <input type="email" name="email" required>
+function doPost(e) {
+  const params = e.parameter;
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  const data = sheet.getDataRange().getValues();
 
-    <label for="date">Select Friday Date</label>
-    <select name="date" required>
-      <option value="">Loading available dates...</option>
-    </select>
+  const date = params.date;
+  const name = params.name;
+  const surname = params.surname;
+  const topic = params.topic;
+  const supervisor = params.supervisor;
+  const email = params.email.toLowerCase();
 
-    <button type="submit">Book Slot</button>
-  </form>
+  const bookedDates = new Set();
+  const usedEmails = new Set();
 
-  <div id="message"></div>
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (row[0] && row[0].trim() !== "") bookedDates.add(row[0].trim());
+    if (row[5] && row[5].trim() !== "") usedEmails.add(row[5].trim().toLowerCase());
+  }
 
-  <script>
-    const form = document.getElementById('bookingForm');
-    const messageDiv = document.getElementById('message');
-    const dateSelect = form.querySelector('select[name="date"]');
+  if (bookedDates.has(date)) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      message: `Date ${date} is already booked.`
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
 
-    const API_URL = "https://script.google.com/macros/s/AKfycbysLAuYXMo8fEHTu8YmwiK8qEdfPj7sJmokbFbhF4Je1G1uB_Fr5nHn_l1lhsDaw4P-/exec";
+  if (usedEmails.has(email)) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      message: `Email ${email} has already booked.`
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
 
-    // Load available dates
-    fetch(API_URL)
-      .then(res => res.json())
-      .then(data => {
-        dateSelect.innerHTML = '<option value="">Select a Friday...</option>';
-        data.forEach(slot => {
-          const opt = document.createElement('option');
-          opt.value = slot.date;
-          opt.textContent = slot.date;
-          dateSelect.appendChild(opt);
-        });
-      })
-      .catch(() => {
-        dateSelect.innerHTML = '<option value="">Failed to load dates</option>';
-      });
+  sheet.appendRow([date, name, surname, topic, supervisor, email]);
 
-    // Handle form submission
-    form.addEventListener('submit', e => {
-      e.preventDefault();
-      messageDiv.textContent = 'Submitting...';
-      messageDiv.style.color = 'black';
+  MailApp.sendEmail({
+    to: email,
+    subject: "Research Friday Booking Confirmation",
+    htmlBody: `
+      <p>Dear ${name} ${surname},</p>
+      <p>Your booking for <strong>${date}</strong> has been confirmed.</p>
+      <p><strong>Topic:</strong> ${topic}<br>
+         <strong>Supervisor:</strong> ${supervisor}</p>
+      <p>Thank you.</p>`
+  });
 
-      const formData = new FormData(form);
-
-      fetch(API_URL, {
-        method: 'POST',
-        body: formData
-      })
-        .then(res => res.json())
-        .then(result => {
-          if (result.success) {
-            messageDiv.style.color = 'green';
-            messageDiv.textContent = '✅ Booking successful! A confirmation email has been sent.';
-            form.reset();
-            // Reload available dates
-            fetch(API_URL)
-              .then(res => res.json())
-              .then(data => {
-                dateSelect.innerHTML = '<option value="">Select a Friday...</option>';
-                data.forEach(slot => {
-                  const opt = document.createElement('option');
-                  opt.value = slot.date;
-                  opt.textContent = slot.date;
-                  dateSelect.appendChild(opt);
-                });
-              });
-          } else {
-            messageDiv.style.color = 'red';
-            messageDiv.textContent = '❌ ' + result.message;
-          }
-        })
-        .catch(err => {
-          messageDiv.style.color = 'red';
-          messageDiv.textContent = '❌ Submission failed. Please try again.';
-        });
-    });
-  </script>
-
-</body>
-</html>
+  return ContentService.createTextOutput(JSON.stringify({
+    success: true
+  })).setMimeType(ContentService.MimeType.JSON);
+}
