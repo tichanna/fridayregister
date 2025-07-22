@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Friday Booking Form</title>
+  <title>Friday Research Booking</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -65,7 +65,6 @@
 
     const API_URL = "https://script.google.com/macros/s/AKfycbwi_1-d87mULSpbc5ehg93rOTcJOHJldXMEN3i5YpkpFbG29AEItdD_seTO_gItgkgZ/exec";
 
-
     // Load available dates
     fetch(API_URL)
       .then(res => res.json())
@@ -74,7 +73,7 @@
         data.forEach(slot => {
           const opt = document.createElement('option');
           opt.value = slot.date;
-          opt.textContent = slot.date; // short format like 01-08-2025
+          opt.textContent = slot.date;
           dateSelect.appendChild(opt);
         });
       })
@@ -86,6 +85,7 @@
     form.addEventListener('submit', e => {
       e.preventDefault();
       messageDiv.textContent = 'Submitting...';
+      messageDiv.style.color = 'black';
 
       const formData = new FormData(form);
 
@@ -97,10 +97,9 @@
         .then(result => {
           if (result.success) {
             messageDiv.style.color = 'green';
-            messageDiv.textContent = '✅ Booking successful!';
+            messageDiv.textContent = '✅ Booking successful! A confirmation email has been sent.';
             form.reset();
-            dateSelect.innerHTML = '<option value="">Refreshing...</option>';
-            // Refresh dates after successful booking
+            // Reload available dates
             fetch(API_URL)
               .then(res => res.json())
               .then(data => {
