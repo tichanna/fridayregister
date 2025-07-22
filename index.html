@@ -1,117 +1,90 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Friday Slot Booking</title>
+  <title>Friday Research Booking</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 500px;
-      margin: 40px auto;
-    }
-    label, select, input {
-      display: block;
-      margin-bottom: 12px;
-      width: 100%;
-      box-sizing: border-box;
-      padding: 8px;
-    }
-    button {
-      padding: 10px;
-      background-color: #0077cc;
-      color: white;
-      border: none;
-      cursor: pointer;
-      width: 100%;
-    }
-    #message {
-      margin-top: 20px;
-      font-weight: bold;
-    }
+    body { font-family: Arial; max-width: 500px; margin: 30px auto; }
+    label, input, select { display: block; width: 100%; margin-bottom: 12px; padding: 8px; }
+    button { padding: 10px; width: 100%; background: #007bff; color: white; border: none; cursor: pointer; }
+    #message { margin-top: 20px; font-weight: bold; }
   </style>
 </head>
 <body>
-  <h2>Book a Friday Slot</h2>
+  <h2>Book a Friday Research Slot</h2>
 
-  <label for="fullname">Full Name:</label>
-  <input type="text" id="fullname" required>
+  <label for="name">Name:</label>
+  <input type="text" id="name" required>
 
-  <label for="email">Email:</label>
-  <input type="email" id="email" required>
+  <label for="surname">Surname:</label>
+  <input type="text" id="surname" required>
 
-  <label for="slot">Select a Friday:</label>
-  <select id="slot">
-    <option value="">Loading slots...</option>
+  <label for="topic">Research Topic:</label>
+  <input type="text" id="topic" required>
+
+  <label for="supervisor">Supervisor:</label>
+  <input type="text" id="supervisor" required>
+
+  <label for="date">Select a Friday (Aug–Oct):</label>
+  <select id="date" required>
+    <option value="">-- Select a Friday --</option>
+    <option value="2025-08-01">01 Aug 2025</option>
+    <option value="2025-08-08">08 Aug 2025</option>
+    <option value="2025-08-15">15 Aug 2025</option>
+    <option value="2025-08-22">22 Aug 2025</option>
+    <option value="2025-08-29">29 Aug 2025</option>
+    <option value="2025-09-05">05 Sep 2025</option>
+    <option value="2025-09-12">12 Sep 2025</option>
+    <option value="2025-09-19">19 Sep 2025</option>
+    <option value="2025-09-26">26 Sep 2025</option>
+    <option value="2025-10-03">03 Oct 2025</option>
+    <option value="2025-10-10">10 Oct 2025</option>
+    <option value="2025-10-17">17 Oct 2025</option>
   </select>
 
-  <button onclick="bookSlot()">Book Slot</button>
+  <button onclick="submitForm()">Submit</button>
 
   <div id="message"></div>
 
   <script>
-    const endpoint = "https://script.google.com/macros/s/AKfycbwaxOvo4Gssztf_Z9I7Ho9K7dCGpXIDuyG6eehR3OtAMlkwHfa0dSG7tkAAyvHiZ1D0sg/exec";
+    const endpoint = "https://script.google.com/macros/s/AKfycbwi_1-d87mULSpbc5ehg93rOTcJOHJldXMEN3i5YpkpFbG29AEItdD_seTO_gItgkgZ/exec";
 
-    async function loadSlots() {
-      try {
-        const res = await fetch(endpoint);
-        const slots = await res.json();
+    async function submitForm() {
+      const name = document.getElementById('name').value.trim();
+      const surname = document.getElementById('surname').value.trim();
+      const topic = document.getElementById('topic').value.trim();
+      const supervisor = document.getElementById('supervisor').value.trim();
+      const date = document.getElementById('date').value;
 
-        const select = document.getElementById('slot');
-        select.innerHTML = "";
-
-        if (slots.length === 0) {
-          select.innerHTML = '<option value="">No available slots</option>';
-          return;
-        }
-
-        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-        for (const slot of slots) {
-          const [day, month, year] = slot.date.split('-');
-          const displayText = `${day} ${monthNames[parseInt(month) - 1]}`;
-          const option = document.createElement('option');
-          option.value = slot.date;
-          option.textContent = displayText;
-          select.appendChild(option);
-        }
-      } catch (err) {
-        document.getElementById('message').textContent = "❌ Could not load slots.";
-      }
-    }
-
-    async function bookSlot() {
-      const fullname = document.getElementById('fullname').value.trim();
-      const email = document.getElementById('email').value.trim();
-      const date = document.getElementById('slot').value;
-
-      if (!fullname || !email || !date) {
-        document.getElementById('message').textContent = "Please fill in your full name, email, and select a date.";
+      if (!name || !surname || !topic || !supervisor || !date) {
+        document.getElementById('message').textContent = "❌ Please fill in all fields.";
         return;
       }
 
+      const formData = new URLSearchParams({ name, surname, topic, supervisor, date });
+
       try {
-        const res = await fetch(endpoint, {
+        const response = await fetch(endpoint, {
           method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({ fullname, email, date })
+          body: formData
         });
 
-        const result = await res.json();
+        const result = await response.json();
+        document.getElementById('message').textContent = result.success
+          ? "✅ " + result.message
+          : "❌ " + result.message;
 
         if (result.success) {
-          document.getElementById('message').textContent = "✅ Slot booked successfully!";
-          await loadSlots(); // Refresh
-          document.getElementById('fullname').value = '';
-          document.getElementById('email').value = '';
-        } else {
-          document.getElementById('message').textContent = "❌ " + result.message;
+          // Clear inputs
+          document.getElementById('name').value = '';
+          document.getElementById('surname').value = '';
+          document.getElementById('topic').value = '';
+          document.getElementById('supervisor').value = '';
+          document.getElementById('date').value = '';
         }
-      } catch (err) {
-        document.getElementById('message').textContent = "❌ Booking failed.";
+      } catch (error) {
+        document.getElementById('message').textContent = "❌ Error submitting form.";
       }
     }
-
-    window.onload = loadSlots;
   </script>
 </body>
 </html>
